@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -20,16 +20,19 @@
 • `{i}delpfp <n>(optional)`
     Delete one profile pic, if no value given, else delete n number of pics.
 
-• `{i}gpoto <username>`
+• `{i}poto <username>`
     Upload the photo of Chat/User if Available.
 """
 
 import asyncio
 import os
 
-from telethon.tl import functions
-from telethon.tl.functions.photos import (DeletePhotosRequest,
-                                          GetUserPhotosRequest)
+from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.photos import (
+    DeletePhotosRequest,
+    GetUserPhotosRequest,
+    UploadProfilePhotoRequest,
+)
 from telethon.tl.types import InputPhoto
 
 from . import *
@@ -43,11 +46,13 @@ TMP_DOWNLOAD_DIRECTORY = "resources/downloads/"
     pattern="setbio ?(.*)",
 )
 async def _(ult):
+    if not ult.out and not is_fullsudo(ult.sender_id):
+        return await eod(ult, "`This Command Is Sudo Restricted.`")
     ok = await eor(ult, "...")
     set = ult.pattern_match.group(1)
     try:
-        await ultroid_bot(functions.account.UpdateProfileRequest(about=set))
-        await ok.edit("Profile bio changed to\n`{}`".format(set))
+        await ultroid_bot(UpdateProfileRequest(about=set))
+        await ok.edit(f"Profile bio changed to\n`{set}`")
     except Exception as ex:
         await ok.edit("Error occured.\n`{}`".format(str(ex)))
     await asyncio.sleep(10)
@@ -61,6 +66,8 @@ async def _(ult):
     pattern="setname ?((.|//)*)",
 )
 async def _(ult):
+    if not ult.out and not is_fullsudo(ult.sender_id):
+        return await eod(ult, "`This Command Is Sudo Restricted.`")
     ok = await eor(ult, "...")
     names = ult.pattern_match.group(1)
     first_name = names
@@ -69,11 +76,12 @@ async def _(ult):
         first_name, last_name = names.split("//", 1)
     try:
         await ultroid_bot(
-            functions.account.UpdateProfileRequest(
-                first_name=first_name, last_name=last_name
-            )
+            UpdateProfileRequest(
+                first_name=first_name,
+                last_name=last_name,
+            ),
         )
-        await ok.edit("Name changed to `{}`".format(names))
+        await ok.edit(f"Name changed to `{names}`")
     except Exception as ex:
         await ok.edit("Error occured.\n`{}`".format(str(ex)))
     await asyncio.sleep(10)
@@ -87,32 +95,28 @@ async def _(ult):
     pattern="setpic$",
 )
 async def _(ult):
-    ok = await eor(ult, "...")
+    if not ult.out and not is_fullsudo(ult.sender_id):
+        return await eod(ult, "`This Command Is Sudo Restricted.`")
+    if not ult.is_reply:
+        return await eod(ult, "`Reply to a Media..`")
     reply_message = await ult.get_reply_message()
-    await ok.edit("`Downloading that picture...`")
-    if not os.path.isdir(TMP_DOWNLOAD_DIRECTORY):
-        os.makedirs(TMP_DOWNLOAD_DIRECTORY)
-    photo = None
+    ok = await eor(ult, "...")
+    replfile = await reply_message.download_media()
+    file = await ultroid_bot.upload_file(replfile)
+    mediain = mediainfo(reply_message.media)
     try:
-        photo = await ultroid_bot.download_media(reply_message, TMP_DOWNLOAD_DIRECTORY)
+        if "pic" in mediain:
+            await ultroid_bot(UploadProfilePhotoRequest(file))
+        elif "gif" or "video" in mediain:
+            await ultroid_bot(UploadProfilePhotoRequest(video=file))
+        else:
+            return await ok.edit("`Invalid MEDIA Type !`")
+        await ok.edit("`My Profile Photo has Successfully Changed !`")
     except Exception as ex:
         await ok.edit("Error occured.\n`{}`".format(str(ex)))
-    else:
-        if photo:
-            await ok.edit("`Uploading it to my profile...`")
-            file = await ultroid_bot.upload_file(photo)
-            try:
-                await ultroid_bot(functions.photos.UploadProfilePhotoRequest(file))
-            except Exception as ex:
-                await ok.edit("Error occured.\n`{}`".format(str(ex)))
-            else:
-                await ok.edit("`My profile picture has been changed !`")
+    os.remove(replfile)
     await asyncio.sleep(10)
     await ok.delete()
-    try:
-        os.remove(photo)
-    except Exception as ex:
-        LOGS.exception(ex)
 
 
 # delete profile pic(s)
@@ -122,6 +126,8 @@ async def _(ult):
     pattern="delpfp ?(.*)",
 )
 async def remove_profilepic(delpfp):
+    if not delpfp.out and not is_fullsudo(delpfp.sender_id):
+        return await eod(delpfp, "`This Command Is Sudo Restricted.`")
     ok = await eor(delpfp, "...")
     group = delpfp.text[8:]
     if group == "all":
@@ -131,7 +137,7 @@ async def remove_profilepic(delpfp):
     else:
         lim = 1
     pfplist = await ultroid_bot(
-        GetUserPhotosRequest(user_id=delpfp.from_id, offset=0, max_id=0, limit=lim)
+        GetUserPhotosRequest(user_id=delpfp.from_id, offset=0, max_id=0, limit=lim),
     )
     input_photos = []
     for sep in pfplist.photos:
@@ -140,7 +146,7 @@ async def remove_profilepic(delpfp):
                 id=sep.id,
                 access_hash=sep.access_hash,
                 file_reference=sep.file_reference,
-            )
+            ),
         )
     await ultroid_bot(DeletePhotosRequest(id=input_photos))
     await ok.edit(f"`Successfully deleted {len(input_photos)} profile picture(s).`")
@@ -148,17 +154,23 @@ async def remove_profilepic(delpfp):
     await ok.delete()
 
 
-@ultroid_cmd(pattern="gpoto ?(.*)")
+@ultroid_cmd(pattern="poto ?(.*)")
 async def gpoto(e):
     ult = e.pattern_match.group(1)
+    a = await eor(e, "`Processing...`")
+    if not ult and e.is_reply:
+        gs = await e.get_reply_message()
+        ult = gs.sender_id
+    if not (ult or e.is_reply):
+        ult = e.chat_id
     try:
         okla = await ultroid_bot.download_profile_photo(
-            ult, "profile.jpg", download_big=True
+            ult,
+            "profile.jpg",
+            download_big=True,
         )
+        await a.delete()
         await ultroid_bot.send_message(e.chat_id, file=okla)
         os.remove(okla)
-    except Exception as e:
-        await eor(e, f"ERROR - {str(e)}")
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
+    except Exception as er:
+        await eor(e, f"ERROR - {str(er)}")

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -18,9 +18,7 @@
     List all sudo users.
 """
 
-import re
-
-from telethon.tl.functions.users import GetFullUserRequest
+from pyUltroid.misc import sudoers
 
 from . import *
 
@@ -29,164 +27,97 @@ from . import *
     pattern="addsudo ?(.*)",
 )
 async def _(ult):
-    if Var.BOT_MODE == True:
-        try:
-            if ult.sender_id != Var.OWNER_ID:
-                return await eor(
-                    ult, "You are sudo user, You cant add other sudo user."
-                )
-        except BaseException:
-            pass
-    else:
-        if ult.sender_id != ultroid_bot.uid:
-            return await eor(ult, "You are sudo user, You cant add other sudo user.")
+    if not ult.out and not is_fullsudo(ult.sender_id):
+        return await eod(ult, "`This Command is Sudo Restricted!..`")
+    inputs = ult.pattern_match.group(1)
+    if str(ult.sender_id) in sudoers():
+        return await eod(ult, "`Sudo users can't add new sudos!`", time=10)
     ok = await eor(ult, "`Updating SUDO Users List ...`")
+    mmm = ""
     if ult.reply_to_msg_id:
         replied_to = await ult.get_reply_message()
-        id = replied_to.sender.id
-        user = await ult.client(GetFullUserRequest(int(id)))
-        sed.append(id)
+        id = await get_user_id(replied_to.sender_id)
+        name = (await ult.client.get_entity(int(id))).first_name
         if id == ultroid_bot.me.id:
-            return await ok.edit("You cant add yourself as Sudo User...")
+            mmm += "You cant add yourself as Sudo User..."
         elif is_sudo(id):
-            return await ok.edit(
-                f"[{user.user.first_name}](tg://user?id={id}) `is already a SUDO User ...`"
-            )
+            mmm += f"[{name}](tg://user?id={id}) `is already a SUDO User ...`"
         elif add_sudo(id):
-            return await ok.edit(
-                f"**Added [{user.user.first_name}](tg://user?id={id}) as SUDO User**"
-            )
+            udB.set("SUDO", "True")
+            mmm += f"**Added [{name}](tg://user?id={id}) as SUDO User**"
         else:
-            return await ok.edit("`SEEMS LIKE THIS FUNCTION CHOOSE TO BROKE ITSELF`")
-
-    args = ult.pattern_match.group(1).strip()
-
-    if re.search(r"[\s]", args) is not None:
-        args = args.split(" ")
-        msg = ""
-        sudos = get_sudos()
-        for item in args:
-            user = ""
-            try:
-                user = await ult.client(GetFullUserRequest(int(item)))
-            except BaseException:
-                pass
-            if not hasattr(user, "user"):
-                msg += f"• `{item}` __Invalid UserID__\n"
-            elif item in sudos:
-                msg += f"• [{user.user.first_name}](tg://user?id={item}) __Already a SUDO__\n"
-            elif add_sudo(item.strip()):
-                msg += (
-                    f"• [{user.user.first_name}](tg://user?id={item}) __Added SUDO__\n"
-                )
+            mmm += "`SEEMS LIKE THIS FUNCTION CHOOSE TO BREAK ITSELF`"
+    elif inputs:
+        id = await get_user_id(inputs)
+        try:
+            name = (await ult.client.get_entity(int(id))).first_name
+        except BaseException:
+            name = ""
+        if id == ultroid_bot.me.id:
+            mmm += "You cant add yourself as Sudo User..."
+        elif is_sudo(id):
+            if name != "":
+                mmm += f"[{name}](tg://user?id={id}) `is already a SUDO User ...`"
             else:
-                msg += f"• `{item}` __Failed to Add SUDO__\n"
-        return await ok.edit(f"**Adding Sudo Users :**\n{msg}")
-
-    id = args.strip()
-    user = ""
-
-    try:
-        user = await ult.client(GetFullUserRequest(int(i)))
-    except BaseException:
-        pass
-
-    if not id.isdigit():
-        return await ok.edit("`Integer(s) Expected`")
-    elif not hasattr(user, "user"):
-        return await ok.edit("`Invalid UserID`")
-    elif is_sudo(id):
-        return await ok.edit(
-            f"[{user.user.first_name}](tg://user?id={id}) `is already a SUDO User ...`"
-        )
-    elif add_sudo(id):
-        return await ok.edit(
-            f"**Added [{user.user.first_name}](tg://user?id={id}) as SUDO User**"
-        )
+                mmm += f"`{id} is already a SUDO User...`"
+        elif add_sudo(id):
+            udB.set("SUDO", "True")
+            if name != "":
+                mmm += f"**Added [{name}](tg://user?id={id}) as SUDO User**"
+            else:
+                mmm += f"**Added **`{id}`** as SUDO User**"
+        else:
+            mmm += "`SEEMS LIKE THIS FUNCTION CHOOSE TO BREAK ITSELF`"
     else:
-        return await ok.edit(f"**Failed to add `{id}` as SUDO User ... **")
+        mmm += "`Reply to a msg or add it's id/username.`"
+    await eod(ok, mmm)
 
 
 @ultroid_cmd(
     pattern="delsudo ?(.*)",
 )
 async def _(ult):
-    if Var.BOT_MODE == True:
-        try:
-            if ult.sender_id != Var.OWNER_ID:
-                return await eor(
-                    ult, "You are sudo user, You cant add other sudo user."
-                )
-        except BaseException:
-            pass
-    else:
-        if ult.sender_id != ultroid_bot.uid:
-            return await eor(ult, "You are sudo user, You cant add other sudo user.")
+    if not ult.out and not is_fullsudo(ult.sender_id):
+        return await eod(ult, "`This Command is Sudo Restricted!..`")
+    inputs = ult.pattern_match.group(1)
+    if str(ult.sender_id) in sudoers():
+        return await eod(
+            ult,
+            "You are sudo user, You cant remove other sudo user.",
+        )
     ok = await eor(ult, "`Updating SUDO Users List ...`")
+    mmm = ""
     if ult.reply_to_msg_id:
         replied_to = await ult.get_reply_message()
-        id = replied_to.sender.id
-        user = await ult.client(GetFullUserRequest(int(id)))
-        sed.remove(id)
+        id = await get_user_id(replied_to.sender_id)
+        name = (await ult.client.get_entity(int(id))).first_name
         if not is_sudo(id):
-            return await ok.edit(
-                f"[{user.user.first_name}](tg://user?id={id}) `wasn't a SUDO User ...`"
-            )
+            mmm += f"[{name}](tg://user?id={id}) `wasn't a SUDO User ...`"
         elif del_sudo(id):
-            return await ok.edit(
-                f"**Removed [{user.user.first_name}](tg://user?id={id}) from SUDO User(s)**"
-            )
+            mmm += f"**Removed [{name}](tg://user?id={id}) from SUDO User(s)**"
         else:
-            return await ok.edit("`SEEMS LIKE THIS FUNCTION CHOOSE TO BROKE ITSELF`")
-
-    args = ult.pattern_match.group(1)
-
-    if re.search(r"[\s]", args) is not None:
-        args = args.split(" ")
-        msg = ""
-        sudos = get_sudos()
-        for item in args:
-            user = ""
-            try:
-                user = await ult.client(GetFullUserRequest(int(item)))
-            except BaseException:
-                pass
-            if not hasattr(user, "user"):
-                msg += f"• `{item}` __Invalid UserID__\n"
-            elif item in sudos and del_sudo(item):
-                msg += (
-                    f"• [{user.user.first_name}](tg://user?id={id}) __Removed SUDO__\n"
-                )
-            elif item not in sudos:
-                msg += (
-                    f"• [{user.user.first_name}](tg://user?id={id}) __Wasn't a SUDO__\n"
-                )
+            mmm += "`SEEMS LIKE THIS FUNCTION CHOOSE TO BREAK ITSELF`"
+    elif inputs:
+        id = await get_user_id(inputs)
+        try:
+            name = (await ult.client.get_entity(int(id))).first_name
+        except BaseException:
+            name = ""
+        if not is_sudo(id):
+            if name != "":
+                mmm += f"[{name}](tg://user?id={id}) `wasn't a SUDO User ...`"
             else:
-                msg += f"• `{item}` __Failed to Remove SUDO__\n"
-        return await ok.edit(msg)
-
-    id = args.strip()
-    user = ""
-
-    try:
-        user = await ult.client(GetFullUserRequest(int(i)))
-    except BaseException:
-        pass
-
-    if not id.isdigit():
-        return await ok.edit("`Integer(s) Expected`")
-    elif not hasattr(user, "user"):
-        return await ok.edit("`Invalid UserID`")
-    elif not is_sudo(id):
-        return await ok.edit(
-            f"[{user.user.first_name}](tg://user?id={id}) wasn't a SUDO user ..."
-        )
-    elif del_sudo(id):
-        return await ok.edit(
-            f"**Removed [{user.user.first_name}](tg://user?id={id}) from SUDO User**"
-        )
+                mmm += f"`{id} wasn't a SUDO User...`"
+        elif del_sudo(id):
+            if name != "":
+                mmm += f"**Removed [{name}](tg://user?id={id}) from SUDO User(s)**"
+            else:
+                mmm += f"**Removed **`{id}`** from SUDO User(s)**"
+        else:
+            mmm += "`SEEMS LIKE THIS FUNCTION CHOOSE TO BREAK ITSELF`"
     else:
-        return await ok.edit(f"**Failed to Remove `{id}` as SUDO User ... **")
+        mmm += "`Reply to a msg or add it's id/username.`"
+    await eod(ok, mmm)
 
 
 @ultroid_cmd(
@@ -194,21 +125,23 @@ async def _(ult):
 )
 async def _(ult):
     ok = await eor(ult, "`...`")
-    sudos = get_sudos()
-    if "" in sudos:
-        return await ok.edit("`No SUDO User was assigned ...`")
+    sudos = Redis("SUDOS")
+    if sudos == "" or sudos is None:
+        return await eod(ult, "`No SUDO User was assigned ...`", time=5)
+    sumos = sudos.split(" ")
     msg = ""
-    for i in sudos:
-        user = ""
+    for i in sumos:
         try:
-            user = await ok.client(GetFullUserRequest(int(i.strip())))
+            name = (await ult.client.get_entity(int(i))).first_name
         except BaseException:
-            pass
-        if hasattr(user, "user"):
-            msg += f"• [{user.user.first_name}](tg://user?id={i}) ( `{i}` )\n"
+            name = ""
+        if name != "":
+            msg += f"• [{name}](tg://user?id={i}) ( `{i}` )\n"
         else:
             msg += f"• `{i}` -> Invalid User\n"
-    return await ok.edit(f"**List of SUDO Users :**\n{msg}")
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
+    m = udB.get("SUDO") if udB.get("SUDO") else "False"
+    if m == "False":
+        m = "[False](https://telegra.ph/Ultroid-04-06)"
+    return await ok.edit(
+        f"**SUDO MODE : {m}\n\nList of SUDO Users :**\n{msg}", link_preview=False
+    )

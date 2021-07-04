@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -9,21 +9,26 @@
 ✘ Commands Available -
 
 • `{i}delchat`
-	Delete the group this cmd is used in.
+    Delete the group this cmd is used in.
 
 • `{i}getlink`
     Get link of group this cmd is used in.
 
-• `{i}create (b|g|c) <group_name>`
+• `{i}create (g|b|c) <group_name>`
     Create group woth a specific name.
-    b - megagroup/supergroup
-    g - small group
+    g - megagroup/supergroup
+    b - small group
     c - channel
 """
 
 
 from telethon.errors import ChatAdminRequiredError as no_admin
-from telethon.tl import functions
+from telethon.tl.functions.channels import CreateChannelRequest, DeleteChannelRequest
+from telethon.tl.functions.messages import (
+    CreateChatRequest,
+    DeleteChatUserRequest,
+    ExportChatInviteRequest,
+)
 
 from . import *
 
@@ -35,12 +40,14 @@ from . import *
 async def _(e):
     xx = await eor(e, "`Processing...`")
     try:
-        await e.client(functions.channels.DeleteChannelRequest(e.chat_id))
+        await e.client(DeleteChannelRequest(e.chat_id))
     except TypeError:
         return await eod(xx, "`Cant delete this chat`", time=10)
     except no_admin:
         return await eod(xx, "`I m not an admin`", time=10)
-    await e.client.send_message(Var.LOG_CHANNEL, f"#Deleted\nDeleted {e.chat_id}")
+    await e.client.send_message(
+        int(udB.get("LOG_CHANNEL")), f"#Deleted\nDeleted {e.chat_id}"
+    )
 
 
 @ultroid_cmd(
@@ -51,7 +58,7 @@ async def _(e):
     xx = await eor(e, "`Processing...`")
     try:
         r = await e.client(
-            functions.messages.ExportChatInviteRequest(e.chat_id),
+            ExportChatInviteRequest(e.chat_id),
         )
     except no_admin:
         return await eod(xx, "`I m not an admin`", time=10)
@@ -68,22 +75,22 @@ async def _(e):
     if type_of_group == "b":
         try:
             r = await e.client(
-                functions.messages.CreateChatRequest(
+                CreateChatRequest(
                     users=["@missrose_bot"],
                     title=group_name,
-                )
+                ),
             )
             created_chat_id = r.chats[0].id
             await e.client(
-                functions.messages.DeleteChatUserRequest(
+                DeleteChatUserRequest(
                     chat_id=created_chat_id,
                     user_id="@missrose_bot",
-                )
+                ),
             )
             result = await e.client(
-                functions.messages.ExportChatInviteRequest(
+                ExportChatInviteRequest(
                     peer=created_chat_id,
-                )
+                ),
             )
             await xx.edit(
                 f"Your [{group_name}]({result.link}) Group Made Boss!",
@@ -94,17 +101,17 @@ async def _(e):
     elif type_of_group == "g" or type_of_group == "c":
         try:
             r = await e.client(
-                functions.channels.CreateChannelRequest(
+                CreateChannelRequest(
                     title=group_name,
                     about="Join @TeamUltroid",
                     megagroup=False if type_of_group == "c" else True,
-                )
+                ),
             )
             created_chat_id = r.chats[0].id
             result = await e.client(
-                functions.messages.ExportChatInviteRequest(
+                ExportChatInviteRequest(
                     peer=created_chat_id,
-                )
+                ),
             )
             await xx.edit(
                 f"Your [{group_name}]({result.link}) Group/Channel Has been made Boss!",
@@ -112,6 +119,3 @@ async def _(e):
             )
         except Exception as ex:
             await xx.edit(str(ex))
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})

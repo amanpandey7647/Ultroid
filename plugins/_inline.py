@@ -1,489 +1,568 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-import os
-import random
 import re
 import time
 from datetime import datetime
 from math import ceil
-from platform import python_version as pyver
+from os import remove
 
 from git import Repo
+from pyUltroid.misc import owner_and_sudos
 from support import *
-from telethon import Button, __version__
-from telethon.tl.types import InputWebDocument
+from telethon.tl.types import InputBotInlineResult, InputWebDocument
 
 from . import *
 
 # ================================================#
-notmine = "This bot is for {}".format(OWNER_NAME)
-ULTROID_PIC = "https://telegra.ph/file/11245cacbffe92e5d5b14.jpg"
-helps = """
-[Uʟᴛʀᴏɪᴅ Sᴜᴘᴘᴏʀᴛ](t.me/ultroidsupport)
+notmine = f"This bot is for {OWNER_NAME}"
 
-**Hᴇʟᴘ Mᴇɴᴜ Oғ {}.
-
-Pʟᴜɢɪɴs ~ {}**
-"""
+TLINK = "https://telegra.ph/file/d9c9bc13647fa1d96e764.jpg"
+helps = get_string("inline_1")
 
 add_ons = udB.get("ADDONS")
-if add_ons:
-    zhelps = """
-[Uʟᴛʀᴏɪᴅ Sᴜᴘᴘᴏʀᴛ](t.me/ultroidsupport)
-
-**Hᴇʟᴘ Mᴇɴᴜ Oғ {}.
-
-Aᴅᴅᴏɴs ~ {}**
-"""
+if add_ons == "True" or add_ons is None:
+    zhelps = get_string("inline_2")
 else:
-    zhelps = """
-[Uʟᴛʀᴏɪᴅ Sᴜᴘᴘᴏʀᴛ](t.me/ultroidsupport)
+    zhelps = get_string("inline_3")
 
-**Hᴇʟᴘ Mᴇɴᴜ Oғ {}.
+C_PIC = udB.get("INLINE_PIC")
 
-Aᴅᴅᴏɴs ~ {}
-
-Gᴏ Aɴᴅ Aᴅᴅ ADDONS Vᴀʀ Wɪᴛʜ Vᴀʟᴜᴇ Tʀᴜᴇ**
-"""
+if C_PIC:
+    _file_to_replace = C_PIC
+    TLINK = C_PIC
+else:
+    _file_to_replace = "resources/extras/inline.jpg"
 # ============================================#
 
 
-@inline
+# --------------------BUTTONS--------------------#
+
+_main_help_menu = [
+    [
+        Button.inline("• Pʟᴜɢɪɴs", data="hrrrr"),
+        Button.inline("• Aᴅᴅᴏɴs", data="frrr"),
+    ],
+    [
+        Button.inline("Oᴡɴᴇʀ•ᴛᴏᴏʟꜱ", data="ownr"),
+        Button.inline("Iɴʟɪɴᴇ•Pʟᴜɢɪɴs", data="inlone"),
+    ],
+    [
+        Button.url("⚙️Sᴇᴛᴛɪɴɢs⚙️", url=f"https://t.me/{asst.me.username}?start=set"),
+    ],
+    [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
+]
+
+SUP_BUTTONS = [
+    [
+        Button.url("Repo", url="https://github.com/TeamUltroid/Ultroid"),
+        Button.url("Addons", url="https://github.com/TeamUltroid/UltroidAddons"),
+    ],
+    [Button.url("Support", url="t.me/UltroidSupport")],
+]
+
+# --------------------BUTTONS--------------------#
+
+
+@in_pattern("")
 @in_owner
-async def e(o):
+async def inline_alive(o):
     if len(o.text) == 0:
         b = o.builder
-        uptime = grt((time.time() - start_time))
-        ALIVEMSG = """
-**The Ultroid Userbot...**\n
-✵ **Owner** - `{}`
-✵ **Ultroid** - `{}`
-✵ **UpTime** - `{}`
-✵ **Python** - `{}`
-✵ **Telethon** - `{}`
-✵ **Branch** - `{}`
-""".format(
-            OWNER_NAME,
-            ultroid_version,
-            uptime,
-            pyver(),
-            __version__,
-            Repo().active_branch,
+        MSG = "• **Ultroid Userbot •**"
+        uptime = grt(time.time() - start_time)
+        MSG += f"\n\n• **Uptime** - `{uptime}`\n"
+        MSG += f"• **OWNER** - `{OWNER_NAME}`"
+        WEB0 = InputWebDocument(
+            "https://telegra.ph/file/55dd0f381c70e72557cb1.jpg", 0, "image/jpg", []
         )
-        res = [
-            b.article(
+        RES = [
+            InputBotInlineResult(
+                str(o.id),
+                "photo",
+                send_message=await b._message(
+                    text=MSG,
+                    media=True,
+                    buttons=SUP_BUTTONS,
+                ),
                 title="Ultroid Userbot",
-                url="https://t.me/TeamUltroid",
-                description="Userbot | Telethon ",
-                text=ALIVEMSG,
-                thumb=InputWebDocument(ULTROID_PIC, 0, "image/jpeg", []),
-                buttons=[
-                    [Button.url(text="Support Group", url="t.me/UltroidSupport")],
-                    [
-                        Button.url(
-                            text="Repo", url="https://github.com/Teamultroid/Ultroid"
-                        )
-                    ],
-                ],
+                description="Userbot | Telethon",
+                url=TLINK,
+                thumb=WEB0,
+                content=InputWebDocument(TLINK, 0, "image/jpg", []),
             )
         ]
-        await o.answer(res, switch_pm=f"👥 ULTROID PORTAL", switch_pm_param="start")
+        await o.answer(RES, switch_pm=f"👥 ULTROID PORTAL", switch_pm_param="start")
 
 
-if Var.BOT_USERNAME is not None and asst is not None:
+@in_pattern("ultd")
+@in_owner
+async def inline_handler(event):
+    z = []
+    for x in LIST.values():
+        for y in x:
+            z.append(y)
+    result = event.builder.photo(
+        file=_file_to_replace,
+        link_preview=False,
+        text=get_string("inline_4").format(
+            OWNER_NAME,
+            len(PLUGINS),
+            len(ADDONS),
+            len(z),
+        ),
+        buttons=_main_help_menu,
+    )
+    await event.answer([result], gallery=True)
 
-    @inline
-    @in_owner
-    async def inline_handler(event):
-        builder = event.builder
-        result = None
-        query = event.text
-        if event.query.user_id in sed and query.startswith("ultd"):
-            z = []
-            for x in LIST.values():
-                for y in x:
-                    z.append(y)
-            cmd = len(z) + 10
-            bn = Var.BOT_USERNAME
-            if bn.startswith("@"):
-                bnn = bn.replace("@", "")
-            else:
-                bnn = bn
-            result = builder.article(
-                title="Help Menu",
-                description="Help Menu - UserBot | Telethon ",
-                url="https://t.me/TheUltroid",
-                thumb=InputWebDocument(ULTROID_PIC, 0, "image/jpeg", []),
-                text=f"** Bᴏᴛ Oғ {OWNER_NAME}\n\nMᴀɪɴ Mᴇɴᴜ\n\nPʟᴜɢɪɴs ~ {len(PLUGINS) - 4}\nAᴅᴅᴏɴs ~ {len(ADDONS)}\nTᴏᴛᴀʟ Cᴏᴍᴍᴀɴᴅs ~ {cmd}**",
-                buttons=[
-                    [
-                        Button.inline("• Pʟᴜɢɪɴs", data="hrrrr"),
-                        Button.inline("• Aᴅᴅᴏɴs", data="frrr"),
-                    ],
-                    [
-                        Button.inline("Oᴡɴᴇʀ•ᴛᴏᴏʟꜱ", data="ownr"),
-                        Button.inline("Iɴʟɪɴᴇ•Pʟᴜɢɪɴs", data="inlone"),
-                    ],
-                    [
-                        Button.url(
-                            "⚙️Sᴇᴛᴛɪɴɢs⚙️",
-                            url=f"https://t.me/{bnn}?start={ultroid_bot.me.id}",
-                        )
-                    ],
-                    [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
-                ],
-            )
-            await event.answer([result] if result else None)
-        elif event.query.user_id in sed and query.startswith("paste"):
-            ok = query.split("-")[1]
-            link = f"https://nekobin.com/{ok}"
-            link_raw = f"https://nekobin.com/raw/{ok}"
-            result = builder.article(
-                title="Paste",
-                text="Pᴀsᴛᴇᴅ Tᴏ Nᴇᴋᴏʙɪɴ!",
-                buttons=[
-                    [
-                        Button.url("NekoBin", url=f"{link}"),
-                        Button.url("Raw", url=f"{link_raw}"),
-                    ]
-                ],
-            )
-            await event.answer([result] if result else None)
 
-    @inline
-    @in_owner
-    @callback("ownr")
-    @owner
-    async def setting(event):
+@in_pattern("paste")
+@in_owner
+async def _(event):
+    ok = event.text.split(" ")[1]
+    link = "https://nekobin.com/"
+    result = event.builder.article(
+        title="Paste",
+        text="Pᴀsᴛᴇᴅ Tᴏ Nᴇᴋᴏʙɪɴ!",
+        buttons=[
+            [
+                Button.url("NekoBin", url=f"{link}{ok}"),
+                Button.url("Raw", url=f"{link}raw/{ok}"),
+            ],
+        ],
+    )
+    await event.answer([result])
+
+
+@in_pattern("dog")
+@in_owner
+async def _(event):
+    ok = event.text.split(" ")[1]
+    link = "https://del.dog/"
+    result = event.builder.article(
+        title="Paste",
+        text="Pᴀsᴛᴇᴅ Tᴏ Dᴏɢʙɪɴ!",
+        buttons=[
+            [
+                Button.url("DogBin", url=f"{link}{ok}"),
+                Button.url("Raw", url=f"{link}raw/{ok}"),
+            ],
+        ],
+    )
+    await event.answer([result])
+
+
+@callback("ownr")
+@owner
+async def setting(event):
+    z = []
+    for x in LIST.values():
+        for y in x:
+            z.append(y)
+    cmd = len(z)
+    await event.edit(
+        get_string("inline_4").format(
+            OWNER_NAME,
+            len(PLUGINS),
+            len(ADDONS),
+            cmd,
+        ),
+        file=_file_to_replace,
+        link_preview=False,
+        buttons=[
+            [
+                Button.inline("•Pɪɴɢ•", data="pkng"),
+                Button.inline("•Uᴘᴛɪᴍᴇ•", data="upp"),
+            ],
+            [
+                Button.inline("•Rᴇsᴛᴀʀᴛ•", data="rstrt"),
+                Button.inline("•Uᴘᴅᴀᴛᴇ•", data="doupdate"),
+            ],
+            [Button.inline("« Bᴀᴄᴋ", data="open")],
+        ],
+    )
+
+
+@callback("doupdate")
+@owner
+async def _(event):
+    check = await updater()
+    if not check:
+        return await event.answer(
+            "You Are Already On Latest Version", cache_time=0, alert=True
+        )
+    repo = Repo.init()
+    ac_br = repo.active_branch
+    changelog, tl_chnglog = await gen_chlog(repo, f"HEAD..upstream/{ac_br}")
+    changelog_str = changelog + f"\n\nClick the below button to update!"
+    if len(changelog_str) > 1024:
+        await event.edit(get_string("upd_4"))
+        file = open(f"ultroid_updates.txt", "w+")
+        file.write(tl_chnglog)
+        file.close()
         await event.edit(
+            get_string("upd_5"),
+            file="ultroid_updates.txt",
             buttons=[
-                [
-                    Button.inline("•Pɪɴɢ•", data="pkng"),
-                    Button.inline("•Uᴘᴛɪᴍᴇ•", data="upp"),
-                ],
-                [Button.inline("•Rᴇsᴛᴀʀᴛ•", data="rstrt")],
-                [Button.inline("<- Bᴀᴄᴋ", data="open")],
+                [Button.inline("• Uᴘᴅᴀᴛᴇ Nᴏᴡ •", data="updatenow")],
+                [Button.inline("« Bᴀᴄᴋ", data="ownr")],
             ],
         )
+        remove(f"ultroid_updates.txt")
+        return
+    else:
+        await event.edit(
+            changelog_str,
+            buttons=[
+                [Button.inline("Update Now", data="updatenow")],
+                [Button.inline("« Bᴀᴄᴋ", data="ownr")],
+            ],
+            parse_mode="html",
+        )
 
-    @callback("pkng")
-    async def _(event):
-        start = datetime.now()
-        end = datetime.now()
-        ms = (end - start).microseconds / 1000
-        pin = f"🌋Pɪɴɢ = {ms}ms"
-        await event.answer(pin, cache_time=0, alert=True)
 
-    @callback("upp")
-    async def _(event):
-        uptime = grt((time.time() - start_time))
-        pin = f"🙋Uᴘᴛɪᴍᴇ = {uptime}"
-        await event.answer(pin, cache_time=0, alert=True)
+@callback("pkng")
+async def _(event):
+    start = datetime.now()
+    end = datetime.now()
+    ms = (end - start).microseconds
+    pin = f"🌋Pɪɴɢ = {ms} microseconds"
+    await event.answer(pin, cache_time=0, alert=True)
 
-    @callback("inlone")
-    @owner
-    async def _(e):
-        button = [
-            [
-                Button.switch_inline(
-                    "Sᴇɴᴅ Oғғɪᴄɪᴀʟ Pʟᴜɢɪɴs",
-                    query="send",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "Pʟᴀʏ Sᴛᴏʀᴇ Aᴘᴘs",
-                    query="app telegram",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "Mᴏᴅᴅᴇᴅ Aᴘᴘs",
-                    query="mods minecraft",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "Sᴇᴀʀᴄʜ Oɴ Gᴏᴏɢʟᴇ",
-                    query="go TeamUltroid",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "Sᴇᴀʀᴄʜ Oɴ Yᴀʜᴏᴏ",
-                    query="yahoo TeamUltroid",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "YᴏᴜTᴜʙᴇ Dᴏᴡɴʟᴏᴀᴅᴇʀ",
-                    query="Ed Sheeran Perfect",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.switch_inline(
-                    "CʟɪᴘAʀᴛ Sᴇᴀʀᴄʜ",
-                    query="clipart frog",
-                    same_peer=True,
-                )
-            ],
-            [
-                Button.inline(
-                    "<- Bᴀᴄᴋ",
-                    data="open",
-                )
-            ],
-        ]
-        await e.edit(buttons=button, link_preview=False)
 
-    @callback("hrrrr")
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        xhelps = helps.format(OWNER_NAME, len(PLUGINS) - 4)
-        buttons = paginate_help(0, PLUGINS, "helpme")
-        await event.edit(f"{xhelps}", buttons=buttons, link_preview=False)
+@callback("upp")
+async def _(event):
+    uptime = grt(time.time() - start_time)
+    pin = f"🙋Uᴘᴛɪᴍᴇ = {uptime}"
+    await event.answer(pin, cache_time=0, alert=True)
 
-    @callback("frrr")
-    @owner
-    async def addon(event):
-        halp = zhelps.format(OWNER_NAME, len(ADDONS))
-        if len(ADDONS) > 0:
-            buttons = paginate_addon(0, ADDONS, "addon")
-            await event.edit(f"{halp}", buttons=buttons, link_preview=False)
-        else:
-            await event.answer(
-                "• Iɴsᴛᴀʟʟ A Pʟᴜɢɪɴ Mᴀɴᴜᴀʟʟʏ Oʀ Aᴅᴅ Vᴀʀ ADDONS Wɪᴛʜ Vᴀʟᴜᴇ True",
-                cache_time=0,
-                alert=True,
+
+@callback("inlone")
+@owner
+async def _(e):
+    button = [
+        [
+            Button.switch_inline(
+                "Pʟᴀʏ Sᴛᴏʀᴇ Aᴘᴘs",
+                query="app telegram",
+                same_peer=True,
+            ),
+            Button.switch_inline(
+                "Mᴏᴅᴅᴇᴅ Aᴘᴘs",
+                query="mods minecraft",
+                same_peer=True,
+            ),
+        ],
+        [
+            Button.switch_inline(
+                "Sᴇᴀʀᴄʜ Oɴ Gᴏᴏɢʟᴇ",
+                query="go TeamUltroid",
+                same_peer=True,
+            ),
+            Button.switch_inline(
+                "Sᴇᴀʀᴄʜ Oɴ Yᴀʜᴏᴏ",
+                query="yahoo TeamUltroid",
+                same_peer=True,
+            ),
+        ],
+        [
+            Button.switch_inline(
+                "WʜɪSᴘᴇʀ",
+                query="msg username wspr Hello",
+                same_peer=True,
+            ),
+            Button.switch_inline(
+                "YᴏᴜTᴜʙᴇ Dᴏᴡɴʟᴏᴀᴅᴇʀ",
+                query="yt Ed Sheeran Perfect",
+                same_peer=True,
+            ),
+        ],
+        [
+            Button.switch_inline(
+                "EBᴏᴏᴋs Uᴘʟᴏᴀᴅᴇʀ",
+                query="ebooks India",
+                same_peer=True,
+            ),
+            Button.switch_inline(
+                "OʀᴀɴɢᴇFᴏx🦊",
+                query="ofox beryllium",
+                same_peer=True,
+            ),
+        ],
+        [
+            Button.inline(
+                "« Bᴀᴄᴋ",
+                data="open",
+            ),
+        ],
+    ]
+    await e.edit(buttons=button, link_preview=False)
+
+
+@callback("hrrrr")
+@owner
+async def on_plug_in_callback_query_handler(event):
+    xhelps = helps.format(OWNER_NAME, len(PLUGINS))
+    buttons = page_num(0, PLUGINS, "helpme", "def")
+    await event.edit(f"{xhelps}", buttons=buttons, link_preview=False)
+
+
+@callback("frrr")
+@owner
+async def addon(event):
+    halp = zhelps.format(OWNER_NAME, len(ADDONS))
+    if len(ADDONS) > 0:
+        buttons = page_num(0, ADDONS, "addon", "add")
+        await event.edit(f"{halp}", buttons=buttons, link_preview=False)
+    else:
+        await event.answer(
+            f"• Tʏᴘᴇ `{HNDLR}setredis ADDONS True`\n Tᴏ ɢᴇᴛ ᴀᴅᴅᴏɴs ᴘʟᴜɢɪɴs",
+            cache_time=0,
+            alert=True,
+        )
+
+
+@callback("rstrt")
+@owner
+async def rrst(ult):
+    await restart(ult)
+
+
+@callback(
+    re.compile(
+        rb"helpme_next\((.+?)\)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    current_page_number = int(event.data_match.group(1).decode("UTF-8"))
+    buttons = page_num(current_page_number + 1, PLUGINS, "helpme", "def")
+    await event.edit(buttons=buttons, link_preview=False)
+
+
+@callback(
+    re.compile(
+        rb"helpme_prev\((.+?)\)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    current_page_number = int(event.data_match.group(1).decode("UTF-8"))
+    buttons = page_num(current_page_number - 1, PLUGINS, "helpme", "def")
+    await event.edit(buttons=buttons, link_preview=False)
+
+
+@callback(
+    re.compile(
+        rb"addon_next\((.+?)\)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    current_page_number = int(event.data_match.group(1).decode("UTF-8"))
+    buttons = page_num(current_page_number + 1, ADDONS, "addon", "add")
+    await event.edit(buttons=buttons, link_preview=False)
+
+
+@callback(
+    re.compile(
+        rb"addon_prev\((.+?)\)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    current_page_number = int(event.data_match.group(1).decode("UTF-8"))
+    buttons = page_num(current_page_number - 1, ADDONS, "addon", "add")
+    await event.edit(buttons=buttons, link_preview=False)
+
+
+@callback("back")
+@owner
+async def backr(event):
+    xhelps = helps.format(OWNER_NAME, len(PLUGINS))
+    current_page_number = int(upage)
+    buttons = page_num(current_page_number, PLUGINS, "helpme", "def")
+    await event.edit(
+        f"{xhelps}",
+        file=_file_to_replace,
+        buttons=buttons,
+        link_preview=False,
+    )
+
+
+@callback("buck")
+@owner
+async def backr(event):
+    xhelps = zhelps.format(OWNER_NAME, len(ADDONS))
+    current_page_number = int(upage)
+    buttons = page_num(current_page_number, ADDONS, "addon", "add")
+    await event.edit(
+        f"{xhelps}",
+        file=_file_to_replace,
+        buttons=buttons,
+        link_preview=False,
+    )
+
+
+@callback("open")
+@owner
+async def opner(event):
+    z = []
+    for x in LIST.values():
+        for y in x:
+            z.append(y)
+    await event.edit(
+        get_string("inline_4").format(
+            OWNER_NAME,
+            len(PLUGINS),
+            len(ADDONS),
+            len(z),
+        ),
+        buttons=_main_help_menu,
+        link_preview=False,
+    )
+
+
+@callback("close")
+@owner
+async def on_plug_in_callback_query_handler(event):
+    await event.edit(
+        get_string("inline_5"),
+        file=_file_to_replace,
+        buttons=Button.inline("Oᴘᴇɴ Aɢᴀɪɴ", data="open"),
+    )
+
+
+@callback(
+    re.compile(
+        b"def_plugin_(.*)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    plugin_name = event.data_match.group(1).decode("UTF-8")
+    help_string = f"Plugin Name - `{plugin_name}`\n"
+    try:
+        for i in HELP[plugin_name]:
+            help_string += i
+    except BaseException:
+        pass
+    if help_string == "":
+        reply_pop_up_alert = f"{plugin_name} has no detailed help..."
+    else:
+        reply_pop_up_alert = help_string
+    reply_pop_up_alert += "\n© @TeamUltroid"
+    buttons = [
+        [
+            Button.inline(
+                "« Sᴇɴᴅ Pʟᴜɢɪɴ »",
+                data=f"sndplug_{(event.data).decode('UTF-8')}",
             )
-
-    @callback("rstrt")
-    @owner
-    async def rrst(ult):
-        await restart(ult)
-
-    @callback(
-        re.compile(
-            rb"helpme_next\((.+?)\)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        current_page_number = int(event.data_match.group(1).decode("UTF-8"))
-        buttons = paginate_help(current_page_number + 1, PLUGINS, "helpme")
-        await event.edit(buttons=buttons, link_preview=False)
-
-    @callback(
-        re.compile(
-            rb"helpme_prev\((.+?)\)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        current_page_number = int(event.data_match.group(1).decode("UTF-8"))
-        buttons = paginate_help(current_page_number - 1, PLUGINS, "helpme")
-        await event.edit(buttons=buttons, link_preview=False)
-
-    @callback(
-        re.compile(
-            rb"addon_next\((.+?)\)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        current_page_number = int(event.data_match.group(1).decode("UTF-8"))
-        buttons = paginate_addon(current_page_number + 1, ADDONS, "addon")
-        await event.edit(buttons=buttons, link_preview=False)
-
-    @callback(
-        re.compile(
-            rb"addon_prev\((.+?)\)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        current_page_number = int(event.data_match.group(1).decode("UTF-8"))
-        buttons = paginate_addon(current_page_number - 1, ADDONS, "addon")
-        await event.edit(buttons=buttons, link_preview=False)
-
-    @callback("back")
-    @owner
-    async def backr(event):
-        xhelps = helps.format(OWNER_NAME, len(PLUGINS) - 4)
-        current_page_number = int(upage)
-        buttons = paginate_help(current_page_number, PLUGINS, "helpme")
-        await event.edit(f"{xhelps}", buttons=buttons, link_preview=False)
-
-    @callback("buck")
-    @owner
-    async def backr(event):
-        xhelps = zhelps.format(OWNER_NAME, len(ADDONS))
-        current_page_number = int(addpage)
-        buttons = paginate_addon(current_page_number, ADDONS, "addon")
-        await event.edit(f"{xhelps}", buttons=buttons, link_preview=False)
-
-    @callback("open")
-    @owner
-    async def opner(event):
-        bn = Var.BOT_USERNAME
-        if bn.startswith("@"):
-            bnn = bn.replace("@", "")
+        ],
+        [
+            Button.inline("« Bᴀᴄᴋ", data="back"),
+            Button.inline("••Cʟᴏꜱᴇ••", data="close"),
+        ],
+    ]
+    try:
+        if str(event.query.user_id) in owner_and_sudos():
+            await event.edit(
+                reply_pop_up_alert,
+                buttons=buttons,
+            )
         else:
-            bnn = bn
-        buttons = [
-            [
-                Button.inline("• Pʟᴜɢɪɴs ", data="hrrrr"),
-                Button.inline("• Aᴅᴅᴏɴs", data="frrr"),
-            ],
-            [
-                Button.inline("Oᴡɴᴇʀ•Tᴏᴏʟꜱ", data="ownr"),
-                Button.inline("Iɴʟɪɴᴇ•Pʟᴜɢɪɴs", data="inlone"),
-            ],
-            [
-                Button.url(
-                    "⚙️Sᴇᴛᴛɪɴɢs⚙️", url=f"https://t.me/{bnn}?start={ultroid_bot.me.id}"
-                )
-            ],
-            [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
-        ]
-        z = []
-        for x in LIST.values():
-            for y in x:
-                z.append(y)
-        cmd = len(z) + 10
-        await event.edit(
-            f"** Bᴏᴛ Oғ {OWNER_NAME}\n\nMᴀɪɴ Mᴇɴᴜ\n\nPʟᴜɢɪɴs ~ {len(PLUGINS) - 4}\nAᴅᴅᴏɴs ~ {len(ADDONS)}\nTᴏᴛᴀʟ Cᴏᴍᴍᴀɴᴅs ~ {cmd}**",
-            buttons=buttons,
-            link_preview=False,
-        )
+            reply_pop_up_alert = notmine
+            await event.answer(reply_pop_up_alert, cache_time=0)
+    except BaseException:
+        halps = f"Do .help {plugin_name} to get the list of commands."
+        await event.edit(halps, buttons=buttons)
 
-    @callback("close")
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        await event.edit(
-            "**Mᴇɴᴜ Hᴀs Bᴇᴇɴ Cʟᴏsᴇᴅ**",
-            buttons=Button.inline("Oᴘᴇɴ Mᴀɪɴ Mᴇɴᴜ Aɢᴀɪɴ", data="open"),
-        )
 
-    @callback(
-        re.compile(
-            b"us_plugin_(.*)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        plugin_name = event.data_match.group(1).decode("UTF-8")
-        help_string = f"Plugin Name - `{plugin_name}`\n"
+@callback(
+    re.compile(
+        b"add_plugin_(.*)",
+    ),
+)
+@owner
+async def on_plug_in_callback_query_handler(event):
+    plugin_name = event.data_match.group(1).decode("UTF-8")
+    help_string = ""
+    try:
+        for i in HELP[plugin_name]:
+            help_string += i
+    except BaseException:
         try:
-            for i in HELP[plugin_name]:
-                help_string += i
-        except BaseException:
-            pass
-        if help_string == "":
-            reply_pop_up_alert = "{} has no detailed help...".format(plugin_name)
-        else:
-            reply_pop_up_alert = help_string
-        reply_pop_up_alert += "\n© @TheUltroid"
-        try:
-            if event.query.user_id in sed:
-                await event.edit(
-                    reply_pop_up_alert,
-                    buttons=[
-                        Button.inline("<- Bᴀᴄᴋ", data="back"),
-                        Button.inline("••Cʟᴏꜱᴇ••", data="close"),
-                    ],
-                )
-            else:
-                reply_pop_up_alert = notmine
-                await event.answer(reply_pop_up_alert, cache_time=0)
-        except BaseException:
-            halps = "Do .help {} to get the list of commands.".format(plugin_name)
-            await event.edit(halps)
-
-    @callback(
-        re.compile(
-            b"add_plugin_(.*)",
-        ),
-    )
-    @owner
-    async def on_plug_in_callback_query_handler(event):
-        plugin_name = event.data_match.group(1).decode("UTF-8")
-        help_string = ""
-        try:
-            for i in HELP[plugin_name]:
-                help_string += i
+            for u in CMD_HELP[plugin_name]:
+                help_string = f"Plugin Name-{plugin_name}\n\n✘ Commands Available-\n\n"
+                help_string += str(CMD_HELP[plugin_name])
         except BaseException:
             try:
-                for u in CMD_HELP[plugin_name]:
+                if plugin_name in LIST:
                     help_string = (
                         f"Plugin Name-{plugin_name}\n\n✘ Commands Available-\n\n"
                     )
-                    help_string += str(CMD_HELP[plugin_name])
+                    for d in LIST[plugin_name]:
+                        help_string += HNDLR + d
+                        help_string += "\n"
             except BaseException:
-                try:
-                    if plugin_name in LIST:
-                        help_string = (
-                            f"Plugin Name-{plugin_name}\n\n✘ Commands Available-\n\n"
-                        )
-                        for d in LIST[plugin_name]:
-                            help_string += HNDLR + d
-                            help_string += "\n"
-                except BaseException:
-                    pass
-        if help_string == "":
-            reply_pop_up_alert = "{} has no detailed help...".format(plugin_name)
+                pass
+    if help_string == "":
+        reply_pop_up_alert = f"{plugin_name} has no detailed help..."
+    else:
+        reply_pop_up_alert = help_string
+    reply_pop_up_alert += "\n© @TeamUltroid"
+    buttons = [
+        [
+            Button.inline(
+                "« Sᴇɴᴅ Pʟᴜɢɪɴ »",
+                data=f"sndplug_{(event.data).decode('UTF-8')}",
+            )
+        ],
+        [
+            Button.inline("« Bᴀᴄᴋ", data="buck"),
+            Button.inline("••Cʟᴏꜱᴇ••", data="close"),
+        ],
+    ]
+    try:
+        if str(event.query.user_id) in owner_and_sudos():
+            await event.edit(
+                reply_pop_up_alert,
+                buttons=buttons,
+            )
         else:
-            reply_pop_up_alert = help_string
-        reply_pop_up_alert += "\n© @TheUltroid"
-        try:
-            if event.query.user_id in sed:
-                await event.edit(
-                    reply_pop_up_alert,
-                    buttons=[
-                        Button.inline("<- Bᴀᴄᴋ", data="buck"),
-                        Button.inline("••Cʟᴏꜱᴇ••", data="close"),
-                    ],
-                )
-            else:
-                reply_pop_up_alert = notmine
-                await event.answer(reply_pop_up_alert, cache_time=0)
-        except BaseException:
-            halps = "Do .help {} to get the list of commands.".format(plugin_name)
-            await event.edit(halps)
+            reply_pop_up_alert = notmine
+            await event.answer(reply_pop_up_alert, cache_time=0)
+    except BaseException:
+        halps = f"Do .help {plugin_name} to get the list of commands."
+        await event.edit(halps, buttons=buttons)
 
 
-def paginate_help(page_number, loaded_plugins, prefix):
+def page_num(page_number, loaded_plugins, prefix, type):
     number_of_rows = 5
     number_of_cols = 2
     emoji = Redis("EMOJI_IN_HELP")
     if emoji:
-        multi, mult2i = emoji, emoji
+        multi = emoji
     else:
-        multi, mult2i = "✘", "✘"
+        multi = "✘"
     helpable_plugins = []
     global upage
     upage = page_number
     for p in loaded_plugins:
-        if not p.startswith("_"):
-            helpable_plugins.append(p)
+        helpable_plugins.append(p)
     helpable_plugins = sorted(helpable_plugins)
     modules = [
         Button.inline(
             "{} {} {}".format(
-                random.choice(list(multi)), x, random.choice(list(mult2i))
+                multi,
+                x,
+                multi,
             ),
-            data="us_plugin_{}".format(x),
+            data=f"{type}_plugin_{x}",
         )
         for x in helpable_plugins
     ]
@@ -498,66 +577,18 @@ def paginate_help(page_number, loaded_plugins, prefix):
         ] + [
             (
                 Button.inline(
-                    "<- Pʀᴇᴠɪᴏᴜs", data="{}_prev({})".format(prefix, modulo_page)
+                    "« Pʀᴇᴠɪᴏᴜs",
+                    data=f"{prefix}_prev({modulo_page})",
                 ),
-                Button.inline("-Bᴀᴄᴋ-", data="open"),
+                Button.inline("« Bᴀᴄᴋ »", data="open"),
                 Button.inline(
-                    "Nᴇxᴛ ->", data="{}_next({})".format(prefix, modulo_page)
+                    "Nᴇxᴛ »",
+                    data=f"{prefix}_next({modulo_page})",
                 ),
-            )
-        ]
-    else:
-        pairs = pairs[
-            modulo_page * number_of_rows : number_of_rows * (modulo_page + 1)
-        ] + [(Button.inline("-Bᴀᴄᴋ-", data="open"),)]
-    return pairs
-
-
-def paginate_addon(page_number, loaded_plugins, prefix):
-    number_of_rows = 5
-    number_of_cols = 2
-    emoji = Redis("EMOJI_IN_HELP")
-    if emoji:
-        multi, mult2i = emoji, emoji
-    else:
-        multi, mult2i = "✘", "✘"
-    helpable_plugins = []
-    global addpage
-    addpage = page_number
-    for p in loaded_plugins:
-        if not p.startswith("_"):
-            helpable_plugins.append(p)
-    helpable_plugins = sorted(helpable_plugins)
-    modules = [
-        Button.inline(
-            "{} {} {}".format(
-                random.choice(list(multi)), x, random.choice(list(mult2i))
             ),
-            data="add_plugin_{}".format(x),
-        )
-        for x in helpable_plugins
-    ]
-    pairs = list(zip(modules[::number_of_cols], modules[1::number_of_cols]))
-    if len(modules) % number_of_cols == 1:
-        pairs.append((modules[-1],))
-    max_num_pages = ceil(len(pairs) / number_of_rows)
-    modulo_page = page_number % max_num_pages
-    if len(pairs) > number_of_rows:
-        pairs = pairs[
-            modulo_page * number_of_rows : number_of_rows * (modulo_page + 1)
-        ] + [
-            (
-                Button.inline(
-                    "<- Pʀᴇᴠɪᴏᴜs", data="{}_prev({})".format(prefix, modulo_page)
-                ),
-                Button.inline("-Bᴀᴄᴋ-", data="open"),
-                Button.inline(
-                    "Nᴇxᴛ ->", data="{}_next({})".format(prefix, modulo_page)
-                ),
-            )
         ]
     else:
         pairs = pairs[
             modulo_page * number_of_rows : number_of_rows * (modulo_page + 1)
-        ] + [(Button.inline("-Bᴀᴄᴋ-", data="open"),)]
+        ] + [(Button.inline("« Bᴀᴄᴋ »", data="open"),)]
     return pairs

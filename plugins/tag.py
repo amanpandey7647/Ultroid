@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -16,7 +16,7 @@
 
 • `{i}tagowner`
     Tag Owner of that chat
-    
+
 • `{i}tagbots`
     Tag Bots of that chat.
 
@@ -86,11 +86,5 @@ async def _(e):
         if "bot" in okk:
             if bb.bot:
                 xx += f"\n[{get_display_name(bb)}](tg://user?id={bb.id})"
-    if len(xx) > 4096:
-        await eor(e, "`Telegram Word Limits Exceeds...`")
-    else:
-        await e.client.send_message(e.chat_id, xx)
-        await e.delete()
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
+    await e.client.send_message(e.chat_id, xx)
+    await e.delete()

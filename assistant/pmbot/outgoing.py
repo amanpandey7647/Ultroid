@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -8,36 +8,32 @@
 # https://github.com/xditya/TeleBot/blob/master/telebot/plugins/mybot/pmbot/outgoing.py
 
 from telethon import events
-from telethon.utils import pack_bot_file_id
 
 from . import *
 
 # outgoing
 
 
-@asst.on(events.NewMessage(func=lambda e: e.is_private))
+@asst.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def on_out_mssg(event):
     x = await event.get_reply_message()
     if x is None:
         return
-    to_send = event.raw_text
     who = event.sender_id
-    if x.fwd_from:
-        to_user = x.fwd_from.sender_id.user_id
-    else:
-        # this is a weird way of doing it
-        return
     if who == OWNER_ID:
-        if to_send.startswith("/"):
-            return
-        if event.text is not None and event.media:
-            # if sending media
-            bot_api_file_id = pack_bot_file_id(event.media)
-            await asst.send_file(
-                to_user,
-                file=bot_api_file_id,
-                caption=event.text,
-                reply_to=x.reply_to_msg_id,
-            )
+        to_user = get_who(x.id)
+        if event.text.startswith("/who"):
+            try:
+                k = await asst.get_entity(int(to_user))
+                return await event.reply(f"[{k.first_name}](tg://user?id={k.id})")
+            except BaseException:
+                return
+        elif event.text.startswith("/"):
+                return
+        if event.media:
+            if event.text:
+                await asst.send_file(int(to_user), event.media, caption=event.text)
+            else:
+                await asst.send_file(int(to_user), event.media)
         else:
-            await asst.send_message(to_user, to_send, reply_to=x.reply_to_msg_id)
+            await asst.send_message(int(to_user), event.text)

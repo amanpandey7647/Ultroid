@@ -1,15 +1,15 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-from pyUltroid.dB.database import Var
 from support import *
 from telethon.errors.rpcerrorlist import BotInlineDisabledError as dis
-from telethon.errors.rpcerrorlist import BotMethodInvalidError as bmi
+from telethon.errors.rpcerrorlist import BotMethodInvalidError
 from telethon.errors.rpcerrorlist import BotResponseTimeoutError as rep
+from telethon.tl.custom import Button
 
 from . import *
 
@@ -19,48 +19,68 @@ from . import *
 )
 async def ult(ult):
     plug = ult.pattern_match.group(1)
-    tgbot = Var.BOT_USERNAME
+    tgbot = asst.me.username
     if plug:
         try:
             if plug in HELP:
-                output = "**Plugin** - `{}`\n".format(plug)
+                output = f"**Plugin** - `{plug}`\n"
                 for i in HELP[plug]:
                     output += i
-                output += "\n© @TheUltroid"
+                output += "\n© @TeamUltroid"
                 await eor(ult, output)
             elif plug in CMD_HELP:
-                kk = f"Plugin Name-{plug}\n\n✘ Commands Available-\n\n"
+                kk = f"Plugin Name-{plug}\n\n✘ Commands Available -\n\n"
                 kk += str(CMD_HELP[plug])
                 await eor(ult, kk)
             else:
                 try:
-                    x = f"Plugin Name-{plug}\n\n✘ Commands Available-\n\n"
+                    x = f"Plugin Name-{plug}\n\n✘ Commands Available -\n\n"
                     for d in LIST[plug]:
                         x += HNDLR + d
                         x += "\n"
+                    x += "\n© @TeamUltroid"
                     await eor(ult, x)
                 except BaseException:
-                    await eod(ult, f"`{plug}` is not a valid plugin!", time=5)
+                    await eod(ult, get_string("help_1").format(plug), time=5)
         except BaseException:
             await eor(ult, "Error 🤔 occured.")
     else:
         try:
             results = await ultroid_bot.inline_query(tgbot, "ultd")
+        except BotMethodInvalidError:
+            z = []
+            for x in LIST.values():
+                for y in x:
+                    z.append(y)
+            cmd = len(z) + 10
+            bnn = asst.me.username
+            return await ultroid_bot.send_message(
+                ult.chat_id,
+                get_string("inline_4").format(
+                    OWNER_NAME,
+                    len(PLUGINS) - 5,
+                    len(ADDONS),
+                    cmd,
+                ),
+                buttons=[
+                    [
+                        Button.inline("• Pʟᴜɢɪɴs", data="hrrrr"),
+                        Button.inline("• Aᴅᴅᴏɴs", data="frrr"),
+                    ],
+                    [
+                        Button.inline("Oᴡɴᴇʀ•ᴛᴏᴏʟꜱ", data="ownr"),
+                        Button.inline("Iɴʟɪɴᴇ•Pʟᴜɢɪɴs", data="inlone"),
+                    ],
+                    [Button.url("⚙️Sᴇᴛᴛɪɴɢs⚙️", url=f"https://t.me/{bnn}?start=set")],
+                    [Button.inline("••Cʟᴏꜱᴇ••", data="close")],
+                ],
+            )
         except rep:
             return await eor(
                 ult,
-                "`The bot did not respond to the inline query.\nConsider using {}restart`".format(
-                    HNDLR
-                ),
+                get_string("help_2").format(HNDLR),
             )
         except dis:
-            return await eor(
-                ult, "`Please turn on inline mode for your bot from` @Botfather."
-            )
-        except bmi:
-            return await eor(
-                ult,
-                f"Hey, \nYou are on Bot Mode. \nBot Mode Users Cant Get Help Directly ... \nInstead Copy Paste The Following in The Chat and Click The Pop Up \n\n `@{tgbot} ultd`",
-            )
+            return await eor(ult, get_string("help_3"))
         await results[0].click(ult.chat_id, reply_to=ult.reply_to_msg_id, hide_via=True)
         await ult.delete()

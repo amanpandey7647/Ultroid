@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -28,79 +28,15 @@
 
 import os
 
-from telethon import Button
-
 from . import *
-
-
-@in_pattern(
-    "send ?(.*)",
-)
-@in_owner
-async def inline_handler(event):
-    builder = event.builder
-    input_str = event.pattern_match.group(1)
-    plug = [*PLUGINS]
-    plugs = []
-    if input_str == None or input_str == "":
-        for i in plug:
-            try:
-                plugs.append(
-                    await event.builder.document(
-                        f"./plugins/{i}.py",
-                        title=f"{i}.py",
-                        description=f"Module Found",
-                        text=f"{i}.py use .paste to paste in neko and raw..",
-                        buttons=[
-                            [
-                                Button.switch_inline(
-                                    "Search Again..?", query="send ", same_peer=True
-                                )
-                            ]
-                        ],
-                    )
-                )
-            except BaseException:
-                pass
-        await event.answer(plugs)
-    else:
-        try:
-            ultroid = builder.document(
-                f"./plugins/{input_str}.py",
-                title=f"{input_str}.py",
-                description=f"Module {input_str} Found",
-                text=f"{input_str}.py use .paste to paste in neko and raw..",
-                buttons=[
-                    [
-                        Button.switch_inline(
-                            "Search Again..?", query="send ", same_peer=True
-                        )
-                    ]
-                ],
-            )
-            await event.answer([ultroid])
-            return
-        except BaseException:
-            ultroidcode = builder.article(
-                title=f"Module {input_str}.py Not Found",
-                description=f"No Such Module",
-                text=f"No Module Named {input_str}.py",
-                buttons=[
-                    [
-                        Button.switch_inline(
-                            "Search Again", query="send ", same_peer=True
-                        )
-                    ]
-                ],
-            )
-            await event.answer([ultroidcode])
-            return
 
 
 @ultroid_cmd(
     pattern="install",
 )
 async def install(event):
+    if not event.out and not is_fullsudo(event.sender_id):
+        return await eod(event, "`This Command Is Sudo Restricted.`")
     await safeinstall(event)
 
 
@@ -172,6 +108,3 @@ async def load(event):
             f"**Could not load** `{shortname}` **because of the following error.**\n`{str(e)}`",
             time=3,
         )
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})

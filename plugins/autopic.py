@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -11,12 +11,18 @@
 • `{i}autopic <search query>`
     Will change your profile pic at defined intervals with pics related to the given topic.
 
+• `{i}stoppic`
+    Stop the AutoPic command.
+
 """
 import asyncio
 import os
-import random
+import urllib
 
-from telethon import functions
+import requests as r
+from bs4 import BeautifulSoup as bs
+from telethon.tl.functions.messages import GetWebPagePreviewRequest as getweb
+from telethon.tl.functions.photos import UploadProfilePhotoRequest
 
 from . import *
 
@@ -25,25 +31,43 @@ from . import *
 async def autopic(e):
     search = e.pattern_match.group(1)
     if not search:
-        return await eor(e, "Heya Give me some Text ..")
-    clls = returnpage(search)
+        return await eod(e, get_string("autopic_1"))
+    clls = autopicsearch(search)
     if len(clls) == 0:
-        return await eor(e, f"No Results found for `{search}`")
-    if not len(clls) == 1:
-        num = random.randrange(0, len(clls) - 1)
+        return await eod(e, get_string("autopic_2").format(search))
+    await eor(e, get_string("autopic_3").format(search))
+    udB.set("AUTOPIC", "True")
+    ST = udB.get("SLEEP_TIME")
+    if ST:
+        SLEEP_TIME = int(ST)
     else:
-        num = 0
-    page = clls[num]
-    title = page["title"]
-    a = await eor(
-        e, f" Got a Collection `{title}` related to your search !\nStarting Autopic !!"
-    )
+        SLEEP_TIME = 1221
     while True:
-        animepp(page["href"])
-        file = await ultroid_bot.upload_file("autopic.jpg")
-        await ultroid_bot(functions.photos.UploadProfilePhotoRequest(file))
-        os.remove("autopic.jpg")
-        await asyncio.sleep(1100)
+        for lie in clls:
+            ge = udB.get("AUTOPIC")
+            if not ge == "True":
+                return
+            au = "https://unsplash.com" + lie["href"]
+            et = await ultroid_bot(getweb(au))
+            try:
+                kar = await ultroid_bot.download_media(et.webpage.photo)
+            except AttributeError:
+                ct = r.get(au).content
+                bsc = bs(ct, "html.parser", from_encoding="utf-8")
+                ft = bsc.find_all("img", "_2UpQX")
+                li = ft[0]["src"]
+                kar = "autopic.png"
+                urllib.request.urlretrieve(li, kar)
+            file = await ultroid_bot.upload_file(kar)
+            await ultroid_bot(UploadProfilePhotoRequest(file))
+            os.remove(kar)
+            await asyncio.sleep(SLEEP_TIME)
 
 
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
+@ultroid_cmd(pattern="stoppic$")
+async def stoppo(ult):
+    gt = udB.get("AUTOPIC")
+    if not gt == "True":
+        return await eod(ult, "AUTOPIC was not in used !!")
+    udB.set("AUTOPIC", "None")
+    await eod(ult, "AUTOPIC Stopped !!")

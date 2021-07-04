@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -34,14 +34,14 @@ dictionary = PyDictionary()
 )
 async def mean(event):
     evid = event.message.id
-    xx = await eor(event, "`Processing...`")
+    xx = await eor(event, get_string("com_1"))
     wrd = event.text.split(" ", maxsplit=1)[1]
     ok = dictionary.meaning(wrd)
     try:
         p = ok["Noun"]
     except BaseException:
         return await xx.edit("Oops! No such word found!!")
-    x = f"**Word** - `{wrd}`\n\n**Meanings** - \n"
+    x = get_string("wrd_1").format(wrd)
     c = 1
     for i in p:
         x += f"**{c}.** `{i}`\n"
@@ -67,10 +67,10 @@ async def mean(event):
 )
 async def mean(event):
     evid = event.message.id
-    xx = await eor(event, "`Processing...`")
+    xx = await eor(event, get_string("com_1"))
     wrd = event.text.split(" ", maxsplit=1)[1]
     ok = dictionary.synonym(wrd)
-    x = f"**Word** - `{wrd}`\n\n**Synonyms** - \n"
+    x = get_string("wrd_2").format(wrd)
     c = 1
     try:
         for i in ok:
@@ -99,10 +99,10 @@ async def mean(event):
 )
 async def mean(event):
     evid = event.message.id
-    xx = await eor(event, "`Processing...`")
+    xx = await eor(event, get_string("com_1"))
     wrd = event.text.split(" ", maxsplit=1)[1]
     ok = dictionary.antonym(wrd)
-    x = f"**Word** - `{wrd}`\n\n**Antonyms** - \n"
+    x = get_string("wrd_3").format(wrd)
     c = 1
     try:
         for i in ok:
@@ -128,7 +128,7 @@ async def mean(event):
 
 @ultroid_cmd(pattern="ud (.*)")
 async def _(event):
-    xx = await eor(event, "`Processing...`")
+    xx = await eor(event, get_string("com_1"))
     word = event.pattern_match.group(1)
     if word is None:
         return await xx.edit("`No word given!`")
@@ -136,10 +136,7 @@ async def _(event):
     try:
         mean = await urban.get_word(word)
         await xx.edit(
-            f"**Text**: `{mean.word}`\n\n**Meaning**: `{mean.definition}`\n\n**Example**: __{mean.example}__"
+            f"**Text**: `{mean.word}`\n\n**Meaning**: `{mean.definition}`\n\n**Example**: __{mean.example}__",
         )
     except asyncurban.WordNotFoundError:
         await xx.edit(f"**No result found for** `{word}`")
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})

@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2020 TeamUltroid
+# Copyright (C) 2021 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -14,11 +14,14 @@
 • `{i}tiny <reply to media>`
     To create Tiny stickers.
 
-• `{i}convert <gif/img>`
+• `{i}convert <gif/img/sticker>`
     Reply to sticker to convert into gif or image.
 
 • `{i}kang <reply to image/sticker>`
     Kang the sticker (add to your pack).
+
+• `{i}packkang <pack name>`
+    Kang the Complete sticker set (with custom name).
 
 • `{i}round <reply to any media>`
     To extract round sticker.
@@ -39,10 +42,13 @@ from os import remove
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
-from telethon.errors import (ChatSendInlineForbiddenError,
-                             ChatSendStickersForbiddenError)
-from telethon.tl.types import (DocumentAttributeFilename,
-                               DocumentAttributeSticker, MessageMediaPhoto)
+from telethon import utils
+from telethon.errors import ChatSendStickersForbiddenError, PackShortNameOccupiedError
+from telethon.tl.types import (
+    DocumentAttributeFilename,
+    DocumentAttributeSticker,
+    MessageMediaPhoto,
+)
 
 from . import *
 
@@ -59,7 +65,7 @@ EMOJI_PATTERN = re.compile(
     "\U0001FA00-\U0001FA6F"  # Chess Symbols
     "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
     "\U00002702-\U000027B0"  # Dingbats
-    "]+"
+    "]+",
 )
 
 
@@ -85,7 +91,8 @@ async def waifu(animu):
     finalcall = "#" + (str(random.choice(waifus)))
     try:
         sticcers = await ultroid_bot.inline_query(
-            "stickerizerbot", f"{finalcall}{(deEmojify(text))}"
+            "stickerizerbot",
+            f"{finalcall}{(deEmojify(text))}",
         )
         await sticcers[0].click(
             animu.chat_id,
@@ -94,8 +101,6 @@ async def waifu(animu):
             hide_via=True,
         )
         await xx.delete()
-    except ChatSendInlineForbiddenError:
-        await xx.edit("`Boss ! I cant use inline things here...`")
     except ChatSendStickersForbiddenError:
         await xx.edit("Sorry boss, I can't send Sticker Here !!")
 
@@ -117,10 +122,15 @@ async def uconverter(event):
     elif "img" in input:
         cmd = ["lottie_convert.py", b, "something.png"]
         file = "something.png"
+    elif "sticker" in input:
+        cmd = ["lottie_convert.py", b, "something.webp"]
+        file = "something.webp"
     else:
-        return await xx.edit("**Please select from gif/img**")
+        return await xx.edit("**Please select from gif/img/sticker**")
     process = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await process.communicate()
     stderr.decode().strip()
@@ -129,6 +139,73 @@ async def uconverter(event):
     await event.client.send_file(event.chat_id, file, force_document=False)
     os.remove(file)
     await xx.delete()
+
+
+@ultroid_cmd(pattern="packkang")
+async def pack_kangish(_):
+    _e = await _.get_reply_message()
+    if not _e:
+        return await eor(_, "`Reply to Sticker.`")
+    if len(_.text) > 9:
+        _packname = _.text.split(" ", maxsplit=1)[1]
+    else:
+        _packname = f"Ultroid Kang Pack By {_.sender_id}"
+    if _e and _e.media and _e.media.document.mime_type == "image/webp":
+        _id = _e.media.document.attributes[1].stickerset.id
+        _hash = _e.media.document.attributes[1].stickerset.access_hash
+        _get_stiks = await ultroid_bot(
+            functions.messages.GetStickerSetRequest(
+                stickerset=types.InputStickerSetID(id=_id, access_hash=_hash)
+            )
+        )
+        stiks = []
+        for i in _get_stiks.documents:
+            x = utils.get_input_document(i)
+            stiks.append(
+                types.InputStickerSetItem(
+                    document=x,
+                    emoji=(i.attributes[1]).alt,
+                )
+            )
+        try:
+            eval(udB.get("PACKKANG"))
+        except BaseException:
+            udB.set("PACKKANG", "{}")
+        ok = eval(udB.get("PACKKANG"))
+        try:
+            pack = ok[_.sender_id] + 1
+        except BaseException:
+            pack = 1
+        try:
+            _r_e_s = await asst(
+                functions.stickers.CreateStickerSetRequest(
+                    user_id=_.sender_id,
+                    title=_packname,
+                    short_name=f"ult_{_.sender_id}_{pack}_by_{(await tgbot.get_me()).username}",
+                    stickers=stiks,
+                )
+            )
+            ok.update({_.sender_id: pack})
+            udB.set("PACKKANG", str(ok))
+        except PackShortNameOccupiedError:
+            time.sleep(1)
+            pack += 1
+            _r_e_s = await asst(
+                functions.stickers.CreateStickerSetRequest(
+                    user_id=_.sender_id,
+                    title=_packname,
+                    short_name=f"ult_{_.sender_id}_{pack}_by_{(await tgbot.get_me()).username}",
+                    stickers=stiks,
+                )
+            )
+            ok.update({_.sender_id: pack})
+            udB.set("PACKKANG", str(ok))
+        await eor(
+            _,
+            f"Pack Kanged Successfully.\nKanged Pack: [link](https://t.me/addstickers/{_r_e_s.set.short_name})",
+        )
+    else:
+        await eor(_, "Unsupported File")
 
 
 @ultroid_cmd(
@@ -141,7 +218,6 @@ async def hehe(args):
         user.username = user.first_name
     message = await args.get_reply_message()
     photo = None
-    emojibypass = False
     is_anim = False
     emoji = None
     if message and message.media:
@@ -158,7 +234,6 @@ async def hehe(args):
                 in message.media.document.attributes
             ):
                 emoji = message.media.document.attributes[1].alt
-                emojibypass = True
         elif "video" in message.media.document.mime_type.split("/"):
             await xx.edit(f"`{random.choice(KANGING_STR)}`")
             xy = await message.download_media()
@@ -169,7 +244,8 @@ async def hehe(args):
         elif "tgsticker" in message.media.document.mime_type:
             await xx.edit(f"`{random.choice(KANGING_STR)}`")
             await ultroid_bot.download_file(
-                message.media.document, "AnimatedSticker.tgs"
+                message.media.document,
+                "AnimatedSticker.tgs",
             )
 
             attributes = message.media.document.attributes
@@ -177,7 +253,6 @@ async def hehe(args):
                 if isinstance(attribute, DocumentAttributeSticker):
                     emoji = attribute.alt
 
-            emojibypass = True
             is_anim = True
             photo = 1
         else:
@@ -189,8 +264,7 @@ async def hehe(args):
 
     if photo:
         splat = args.text.split()
-        if not emojibypass:
-            emoji = "🔰"
+        emoji = "🏵"
         pack = 1
         if len(splat) == 3:
             pack = splat[2]  # User sent ultroid_both
@@ -216,7 +290,7 @@ async def hehe(args):
             cmd = "/newanimated"
 
         response = urllib.request.urlopen(
-            urllib.request.Request(f"http://t.me/addstickers/{packname}")
+            urllib.request.Request(f"http://t.me/addstickers/{packname}"),
         )
         htmlstr = response.read().decode("utf8").split("\n")
 
@@ -224,7 +298,7 @@ async def hehe(args):
             "  A <strong>Telegram</strong> user has created the <strong>Sticker&nbsp;Set</strong>."
             not in htmlstr
         ):
-            async with ultroid_bot.conversation("Stickers") as conv:
+            async with ultroid_bot.conversation("@Stickers") as conv:
                 await conv.send_message("/addsticker")
                 await conv.get_response()
                 await ultroid_bot.send_read_acknowledge(conv.chat_id)
@@ -237,7 +311,7 @@ async def hehe(args):
                     await xx.edit(
                         "`Switching to Pack "
                         + str(pack)
-                        + " due to insufficient space`"
+                        + " due to insufficient space`",
                     )
                     await conv.send_message(packname)
                     x = await conv.get_response()
@@ -274,7 +348,7 @@ async def hehe(args):
                         await xx.edit(
                             f"`Sticker added in a Different Pack !\
                             \nThis Pack is Newly created!\
-                            \nYour pack can be found [here](t.me/addstickers/{packname})",
+                            \nYour pack can be found` [here](t.me/addstickers/{packname})",
                             parse_mode="md",
                         )
                         return
@@ -287,7 +361,7 @@ async def hehe(args):
                 rsp = await conv.get_response()
                 if "Sorry, the file type is invalid." in rsp.text:
                     await xx.edit(
-                        "`Failed to add sticker, use` @Stickers `bot to add the sticker manually.`"
+                        "`Failed to add sticker, use` @Stickers `bot to add the sticker manually.`",
                     )
                     return
                 await conv.send_message(emoji)
@@ -314,7 +388,7 @@ async def hehe(args):
                 rsp = await conv.get_response()
                 if "Sorry, the file type is invalid." in rsp.text:
                     await xx.edit(
-                        "`Failed to add sticker, use` @Stickers `bot to add the sticker manually.`"
+                        "`Failed to add sticker, use` @Stickers `bot to add the sticker manually.`",
                     )
                     return
                 await conv.send_message(emoji)
@@ -361,7 +435,9 @@ async def ultdround(event):
         cmd = ["lottie_convert.py", ultt, "ult.png"]
         file = "ult.png"
         process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await process.communicate()
         stderr.decode().strip()
@@ -384,7 +460,10 @@ async def ultdround(event):
     npImage = np.dstack((npImage, npAlpha))
     Image.fromarray(npImage).save("ult.webp")
     await event.client.send_file(
-        event.chat_id, "ult.webp", force_document=False, reply_to=event.reply_to_msg_id
+        event.chat_id,
+        "ult.webp",
+        force_document=False,
+        reply_to=event.reply_to_msg_id,
     )
     await xx.delete()
     os.remove(file)
@@ -402,10 +481,10 @@ async def ultdestroy(event):
         ult.media and ult.media.document and "tgsticker" in ult.media.document.mime_type
     ):
         return await eor(event, "`Reply to Animated Sticker only`")
-    roid = await event.client.download_media(ult, "ultroid.tgs")
+    await event.client.download_media(ult, "ultroid.tgs")
     xx = await eor(event, "`Processing...`")
     os.system("lottie_convert.py ultroid.tgs json.json")
-    json = open("json.json", "r")
+    json = open("json.json")
     jsn = json.read()
     json.close()
     jsn = (
@@ -449,7 +528,7 @@ async def ultiny(event):
     if ik.endswith(".tgs"):
         await event.client.download_media(reply, "ult.tgs")
         os.system("lottie_convert.py ult.tgs json.json")
-        json = open("json.json", "r")
+        json = open("json.json")
         jsn = json.read()
         json.close()
         jsn = jsn.replace("512", "2000")
@@ -508,6 +587,3 @@ async def ultiny(event):
     await xx.delete()
     os.remove(file)
     os.remove(ik)
-
-
-HELP.update({f"{__name__.split('.')[1]}": f"{__doc__.format(i=HNDLR)}"})
